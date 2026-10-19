@@ -113,21 +113,8 @@ const authOptions = {
 		},
 	},
 	emailVerification: {
-		async sendVerificationEmail({ user, url }) {
-			await sendEmail({
-				to: user.email,
-				subject: "Verify your email address",
-				template: "verify-email",
-				variables: {
-					verificationUrl: url,
-					userEmail: user.email,
-					userName: user.name,
-					appName: "Better Auth Demo",
-					expirationMinutes: "10",
-					verificationCode: "",
-				},
-			});
-		},
+		sendOnSignUp: false,
+		sendOnSignIn: false,
 	},
 	account: {
 		accountLinking: {
@@ -147,6 +134,8 @@ const authOptions = {
 	},
 	emailAndPassword: {
 		enabled: true,
+		requireEmailVerification: false,
+		autoSignIn: true,
 		async sendResetPassword({ user, url }) {
 			await sendEmail({
 				to: user.email,
