@@ -1,13 +1,12 @@
 import { DatabaseSync } from "node:sqlite";
 import { electron } from "@better-auth/electron";
-import { dash, sendEmail, sentinel } from "@better-auth/infra";
 import { NodeSqliteDialect } from "@better-auth/kysely-adapter/node-sqlite-dialect";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { sso } from "@better-auth/sso";
 import { stripe } from "@better-auth/stripe";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
-import type { BetterAuthOptions, BetterAuthPlugin } from "better-auth";
+import type { BetterAuthOptions } from "better-auth";
 import { APIError, betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import type { Organization } from "better-auth/plugins";
@@ -19,8 +18,6 @@ import {
 	jwt,
 	lastLoginMethod,
 	multiSession,
-	oAuthProxy,
-	oneTap,
 	openAPI,
 	organization,
 	twoFactor,
@@ -29,6 +26,7 @@ import { MysqlDialect } from "kysely";
 import { createPool } from "mysql2/promise";
 import { Stripe } from "stripe";
 import { baseURL, mcpResource, organizationClaim } from "./demo-url.ts";
+import { sendDemoEmail } from "./email/send.ts";
 import {
 	createSCIMDemoPlugin,
 	isSCIMDemoEmployeePortalEnabled,
@@ -85,23 +83,10 @@ if (!database) {
 
 const scimDemoPlugins = isSCIMDemoEnabled() ? [createSCIMDemoPlugin()] : [];
 
-function isBetterAuthPlugin(plugin: unknown): plugin is BetterAuthPlugin {
-	return (
-		typeof plugin === "object" &&
-		plugin !== null &&
-		"id" in plugin &&
-		typeof plugin.id === "string"
-	);
-}
-
-const dashPlugin: unknown = dash();
-if (!isBetterAuthPlugin(dashPlugin)) {
-	throw new Error("The Dash integration did not return a Better Auth plugin");
-}
-
 const authOptions = {
 	appName: "Better Auth Demo",
 	database,
+	telemetry: { enabled: false },
 	user: {
 		additionalFields: {
 			scimDemoRole: {
@@ -118,18 +103,7 @@ const authOptions = {
 	},
 	account: {
 		accountLinking: {
-			trustedProviders: [
-				"email-password",
-				"facebook",
-				"github",
-				"google",
-				"discord",
-				"microsoft",
-				"twitch",
-				"twitter",
-				"paypal",
-				"vercel",
-			],
+			trustedProviders: ["email-password"],
 		},
 	},
 	emailAndPassword: {
@@ -137,89 +111,31 @@ const authOptions = {
 		requireEmailVerification: false,
 		autoSignIn: true,
 		async sendResetPassword({ user, url }) {
-			await sendEmail({
+			await sendDemoEmail({
 				to: user.email,
 				subject: "Reset your password",
-				template: "reset-password",
-				variables: {
-					userEmail: user.email,
-					resetLink: url,
-					userName: user.name,
-				},
+				text: `Hi ${user.name},\n\nReset your password: ${url}`,
 			});
-		},
-	},
-	socialProviders: {
-		facebook: {
-			clientId: process.env.FACEBOOK_CLIENT_ID || "",
-			clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
-		},
-		github: {
-			clientId: process.env.GITHUB_CLIENT_ID || "",
-			clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
-		},
-		google: {
-			clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-		},
-		discord: {
-			clientId: process.env.DISCORD_CLIENT_ID || "",
-			clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
-		},
-		microsoft: {
-			clientId: process.env.MICROSOFT_CLIENT_ID || "",
-			clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-		},
-		twitch: {
-			clientId: process.env.TWITCH_CLIENT_ID || "",
-			clientSecret: process.env.TWITCH_CLIENT_SECRET || "",
-		},
-		twitter: {
-			clientId: process.env.TWITTER_CLIENT_ID || "",
-			clientSecret: process.env.TWITTER_CLIENT_SECRET || "",
-		},
-		paypal: {
-			clientId: process.env.PAYPAL_CLIENT_ID || "",
-			clientSecret: process.env.PAYPAL_CLIENT_SECRET || "",
-		},
-		vercel: {
-			clientId: process.env.VERCEL_CLIENT_ID || "",
-			clientSecret: process.env.VERCEL_CLIENT_SECRET || "",
 		},
 	},
 	plugins: [
 		organization({
 			async sendInvitationEmail(data) {
-				await sendEmail({
+				const inviteLink = `${baseURL}/accept-invitation/${data.id}`;
+				await sendDemoEmail({
 					to: data.email,
 					subject: "You've been invited to join an organization",
-					template: "invitation",
-					variables: {
-						inviterEmail: data.inviter.user.email,
-						inviterName: data.inviter.user.name,
-						organizationName: data.organization.name,
-						role: data.role,
-						inviteLink:
-							process.env.NODE_ENV === "development"
-								? `http://localhost:3000/accept-invitation/${data.id}`
-								: `${baseURL}/accept-invitation/${data.id}`,
-					},
+					text: `${data.inviter.user.name} (${data.inviter.user.email}) invited you to join ${data.organization.name} as ${data.role}.\n\nAccept invitation: ${inviteLink}`,
 				});
 			},
 		}),
 		twoFactor({
 			otpOptions: {
 				async sendOTP({ user, otp }) {
-					await sendEmail({
+					await sendDemoEmail({
 						to: user.email,
 						subject: "Your two-factor authentication code",
-						template: "two-factor",
-						variables: {
-							otpCode: otp,
-							userEmail: user.email,
-							userName: user.name,
-							appName: "Better Auth Demo",
-						},
+						text: `Hi ${user.name},\n\nYour Better Auth Demo authentication code is: ${otp}`,
 					});
 				},
 			},
@@ -229,11 +145,7 @@ const authOptions = {
 		bearer(),
 		admin(),
 		multiSession(),
-		oAuthProxy({
-			productionURL: baseURL,
-		}),
 		nextCookies(),
-		oneTap(),
 		stripe({
 			stripeClient: new Stripe(process.env.STRIPE_KEY || "sk_test_"),
 			stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
@@ -481,7 +393,6 @@ const authOptions = {
 		"https://better-auth-demo-*-better-auth.vercel.app",
 		"better-auth://",
 		"com.better-auth.demo:/",
-		"https://appleid.apple.com",
 	],
 } satisfies BetterAuthOptions;
 
@@ -502,8 +413,6 @@ export const auth = betterAuth({
 			authOptions,
 			{ shouldMutateListDeviceSessionsEndpoint: true },
 		),
-		dashPlugin,
-		sentinel(),
 	],
 });
 

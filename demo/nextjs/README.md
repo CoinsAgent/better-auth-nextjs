@@ -35,9 +35,18 @@ Here’s how you can get the app running locally:
      mv .env.example .env
      ```
 
-   * Open `.env` and fill in the required details.
-     These will include things like API URLs, client IDs, and secrets needed to
-     connect to the Better Auth service.
+   * Open `.env` and configure your public origin, auth secret, and database
+     connection.
+
+Social sign-in providers and Google One Tap are disabled in this demo.
+Use email/password or passkey sign-in; social provider credentials are not needed.
+
+This demo runs without Better Auth hosted Infrastructure services or an
+Infrastructure API key. Dashboard tracking, Sentinel security checks, and
+telemetry are disabled. Password resets, organization invitations, and email
+two-factor codes are printed as `[Demo email preview]` messages in the server
+console during development. No email is delivered. Configure an email sender in
+`lib/email/send.ts` before using these email flows in production.
 
 Make sure `TURSO_DATABASE_URL=your_turso_url` and
 `TURSO_AUTH_TOKEN=your_turso_token` is set or `USE_MYSQL=true` and

@@ -15,7 +15,6 @@
   "dependencies": {
     "@better-auth/core": "^1.7.11",
     "@better-auth/electron": "^1.7.11",
-    "@better-auth/infra": "^0.3.5",
     "@better-auth/kysely-adapter": "^1.7.11",
     "@better-auth/mcp": "^1.7.11",
     "@better-auth/oauth-provider": "^1.7.11",

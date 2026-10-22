@@ -1,5 +1,4 @@
 import { electronProxyClient } from "@better-auth/electron/proxy";
-import { dashClient } from "@better-auth/infra/client";
 import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { passkeyClient } from "@better-auth/passkey/client";
 import { ssoClient } from "@better-auth/sso/client";
@@ -10,7 +9,6 @@ import {
 	deviceAuthorizationClient,
 	lastLoginMethodClient,
 	multiSessionClient,
-	oneTapClient,
 	organizationClient,
 	twoFactorClient,
 } from "better-auth/client/plugins";
@@ -20,7 +18,6 @@ import type { auth } from "./auth";
 
 export const authClient = createAuthClient({
 	plugins: [
-		dashClient(),
 		ssoClient(),
 		organizationClient(),
 		twoFactorClient({
@@ -31,12 +28,6 @@ export const authClient = createAuthClient({
 		passkeyClient(),
 		adminClient(),
 		multiSessionClient(),
-		oneTapClient({
-			clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-			promptOptions: {
-				maxAttempts: 1,
-			},
-		}),
 		oauthProviderClient(),
 		stripeClient({
 			subscription: true,

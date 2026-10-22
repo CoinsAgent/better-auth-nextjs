@@ -1,13 +1,11 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { toast } from "sonner";
 import SignIn from "@/app/(auth)/sign-in/_components/sign-in";
 import { SignUp } from "@/app/(auth)/sign-in/_components/sign-up";
 import { Tabs } from "@/components/ui/tabs2";
 import { authClient } from "@/lib/auth-client";
-import { getCallbackURL } from "@/lib/shared";
 import { cn } from "@/lib/utils";
 import { ElectronTransferUser } from "./_components/electron";
 
@@ -16,23 +14,7 @@ export default function Page() {
 	const [session, setSession] = useState<
 		typeof authClient.$Infer.Session | null
 	>(null);
-	const router = useRouter();
 	const params = useSearchParams();
-
-	useEffect(() => {
-		authClient.oneTap({
-			fetchOptions: {
-				query: params,
-				onError: ({ error }) => {
-					toast.error(error.message || "An error occurred");
-				},
-				onSuccess: () => {
-					toast.success("Successfully signed in");
-					router.push(getCallbackURL(params));
-				},
-			},
-		});
-	}, []);
 
 	useEffect(() => {
 		if (params.get("client_id") === "electron") {
