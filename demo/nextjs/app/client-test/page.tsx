@@ -17,93 +17,114 @@ import { Label } from "@/components/ui/label";
 import { useSessionQuery } from "@/data/user/session-query";
 import { useSignOutMutation } from "@/data/user/sign-out-mutation";
 import { authClient } from "@/lib/auth-client";
+import { OAuthPlayground } from "./oauth-playground";
 
 export default function Page() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [loading, startTransition] = useTransition();
-	const { data: session, isPending, error } = useSessionQuery();
+	const { data: session, isPending, error, refetch } = useSessionQuery();
 	const signOutMutation = useSignOutMutation();
 
 	const handleLogin = async () => {
 		startTransition(async () => {
-			await authClient.signIn.email(
-				{
-					email,
-					password,
-					callbackURL: "/client-test",
-				},
-				{
-					onError: (ctx) => {
-						toast.error(ctx.error.message);
+			try {
+				await authClient.signIn.email(
+					{
+						email,
+						password,
+						callbackURL: "/client-test",
 					},
-					onSuccess: () => {
-						toast.success("Successfully logged in!");
-						setEmail("");
-						setPassword("");
+					{
+						onError: (ctx) => {
+							toast.error(ctx.error.message);
+						},
+						onSuccess: async () => {
+							toast.success("Successfully logged in!");
+							setEmail("");
+							setPassword("");
+							await refetch();
+						},
 					},
-				},
-			);
+				);
+			} catch (cause) {
+				toast.error(cause instanceof Error ? cause.message : "Sign in failed.");
+			}
 		});
 	};
 
 	return (
 		<div className="container mx-auto py-10 space-y-8">
 			<h1 className="text-2xl font-bold text-center">
-				Client Authentication Test
+				Client Authentication & OAuth Test
 			</h1>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 				{/* Login Form */}
-				<Card>
-					<CardHeader>
-						<CardTitle>Sign In</CardTitle>
-						<CardDescription>
-							Enter your email and password to sign in
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div className="grid gap-4">
-							<div className="grid gap-2">
-								<Label htmlFor="email">Email</Label>
-								<Input
-									id="email"
-									type="email"
-									placeholder="m@example.com"
-									value={email}
-									onChange={(e) => setEmail(e.target.value)}
-								/>
+				<form
+					onSubmit={(event) => {
+						event.preventDefault();
+						void handleLogin();
+					}}
+				>
+					<Card className="h-full">
+						<CardHeader>
+							<CardTitle>1. Sign in</CardTitle>
+							<CardDescription>
+								Enter your email and password to sign in
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="grid gap-4">
+								<div className="grid gap-2">
+									<Label htmlFor="email">Email</Label>
+									<Input
+										id="email"
+										type="email"
+										autoComplete="email"
+										required
+										placeholder="m@example.com"
+										value={email}
+										onChange={(e) => setEmail(e.target.value)}
+									/>
+								</div>
+								<div className="grid gap-2">
+									<Label htmlFor="password">Password</Label>
+									<Input
+										id="password"
+										type="password"
+										autoComplete="current-password"
+										required
+										placeholder="••••••••"
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+									/>
+								</div>
 							</div>
-							<div className="grid gap-2">
-								<Label htmlFor="password">Password</Label>
-								<Input
-									id="password"
-									type="password"
-									placeholder="••••••••"
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-								/>
-							</div>
-						</div>
-					</CardContent>
-					<CardFooter>
-						<Button className="w-full" onClick={handleLogin} disabled={loading}>
-							{loading ? (
-								<>
-									<Loader2 size={16} className="mr-2 animate-spin" />
-									Signing in...
-								</>
-							) : (
-								"Sign In"
-							)}
-						</Button>
-					</CardFooter>
-				</Card>
+						</CardContent>
+						<CardFooter>
+							<Button
+								type="submit"
+								className="w-full"
+								disabled={loading || signOutMutation.isPending}
+							>
+								{loading ? (
+									<>
+										<Loader2 size={16} className="mr-2 animate-spin" />
+										Signing in...
+									</>
+								) : (
+									"Sign In"
+								)}
+							</Button>
+						</CardFooter>
+					</Card>
+				</form>
 
 				{/* Session Display */}
 				<Card>
 					<CardHeader>
-						<CardTitle>Session Information</CardTitle>
+						<CardTitle>2. Session information</CardTitle>
 						<CardDescription>
 							{isPending
 								? "Loading session..."
@@ -177,6 +198,10 @@ export default function Page() {
 					)}
 				</Card>
 			</div>
+			<OAuthPlayground
+				key={session?.session.id ?? "signed-out"}
+				user={session?.user}
+			/>
 		</div>
 	);
 }

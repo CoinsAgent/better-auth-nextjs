@@ -91,6 +91,45 @@ Open it in your browser, and you’re good to go!
 Feel free to jump in and edit the app by modifying `app/page.tsx`.
 Any changes you make will update automatically in the browser.
 
+### Try the client authentication and OAuth flow
+
+Open `/client-test` on the running demo, for example
+[http://localhost:3000/client-test](http://localhost:3000/client-test).
+
+1. Sign in with an existing email/password account. Create an account at
+   `/sign-in` first if needed.
+2. Inspect the current session in **Session information**.
+3. Click **Start authorization**, review the permissions, then choose
+   **Allow access** or **Deny**.
+4. Inspect the authorization code, then click **Exchange code for tokens**.
+5. Inspect the access, refresh, and ID tokens in **Token response**.
+6. Click **Fetch user info** to call the OIDC UserInfo endpoint with the access token.
+
+The walkthrough registers a public native test client and uses S256 PKCE,
+state, and nonce. It requests JSON authorization responses and reads the
+registered loopback callback in memory, like `app/client-test/oauth-token.sh`.
+The browser stays on `/client-test`; no server needs to listen on the callback
+port. Account selection continues with the current signed-in account. The
+requested identity scopes do not require organization selection.
+
+Each authorization explicitly asks for consent. Restarting creates fresh OAuth
+proof; a code can be exchanged only once. Codes, tokens, and UserInfo remain in
+page memory and clear on restart, sign-out, account change, or reload. The
+registered OAuth client and consent remain in the demo database.
+
+Run the focused walkthrough tests with:
+
+```bash
+pnpm --dir ../.. exec vitest run --config demo/nextjs/app/client-test/vitest.config.ts
+```
+
+### Sign in with Ethereum
+
+Open `/client-test-siwe` for the same OAuth walkthrough using an Ethereum wallet
+instead of email/password. Click **Sign in with Ethereum**, approve the sign-in
+message, then continue through consent, code exchange, and UserInfo. See the
+[SIWE walkthrough](app/client-test-siwe/README.md) for setup and testing.
+
 ### Accessing the Dev Server from a Remote Host
 
 When accessing the demo through a remote host or IP address, you may see:

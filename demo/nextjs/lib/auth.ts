@@ -34,6 +34,7 @@ import {
 } from "./scim-demo.ts";
 import { resolveSCIMDemoSSOUser } from "./scim-demo-employee.ts";
 import { getSCIMDemoOIDCProvider } from "./scim-demo-oidc.ts";
+import { createDemoSIWEPlugin } from "./siwe.ts";
 
 const DEMO_SQLITE_CONTENTION_TIMEOUT_MS = 5_000;
 
@@ -119,6 +120,7 @@ const authOptions = {
 		},
 	},
 	plugins: [
+		createDemoSIWEPlugin(baseURL),
 		organization({
 			async sendInvitationEmail(data) {
 				const inviteLink = `${baseURL}/accept-invitation/${data.id}`;
